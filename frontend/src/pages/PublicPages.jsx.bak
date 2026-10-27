@@ -1,0 +1,96 @@
+import React, { useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { api } from '../api.js';
+import { Msg, useLoad } from '../components/ui.jsx';
+
+export function BusinessList() {
+  const [q, setQ] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const { data, error } = useLoad(
+    () => api.get('/api/public/businesses', { params: { q: searchTerm || undefined } }).then((r) => r.data),
+    [searchTerm]
+  );
+
+  React.useEffect(() => {
+    const query = q.trim();
+    if (!query) {
+      setSuggestions([]);
+      setSuggestionLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setSuggestionLoading(true);
+      try {
+        const response = await api.get('/api/public/businesses', { params: { q: query } });
+        if (!cancelled) setSuggestions((response.data || []).slice(0, 6));
+      } catch {
+        if (!cancelled) setSuggestions([]);
+      } finally {
+        if (!cancelled) setSuggestionLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [q]);
+
+  const submitSearch = (event) => {
+    event.preventDefault();
+    setShowSuggestions(false);
+    setSearchTerm(q.trim());
+  };
+
+  const chooseSuggestion = (business) => {
+    setQ(business.name);
+    setSearchTerm(business.name);
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
+
+  return (
+    <div className="container">
+      <div className="card">
+        <h2>Find a business</h2>
+        <form onSubmit={submitSearch}>
+          <div className="row" style={{ alignItems: 'flex-start' }}>
+            <div style={{ position: 'relative', width: '100%', maxWidth: 320 }}>
+              <input
+                style={{ width: '100%', boxSizing: 'border-box' }}
+                placeholder="Search by name"
+                value={q}
+                autoComplete="off"
+                aria-label="Search businesses by name"
+                aria-autocomplete="list"
+                aria-expanded={showSuggestions && suggestions.length > 0}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                onChange={(event) => {
+                  setQ(event.target.value);
+                  setShowSuggestions(true);
+                }}
+              />
+              {showSuggestions && q.trim() && (
+                <div
+                  role="listbox"
+                  aria-label="Business suggestions"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    zIndex: 20,
+                    marginTop: 4,
+                    background: 'var(--card, #fff)',
+                    border: '1px solid var(--border, #ccc)',
+                    borderRadius: 8,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+                    overflow: 'hidden'
+                  }}
+                ></div>

@@ -1,0 +1,10 @@
+# Development profile only. The secret below is a DEV PLACEHOLDER and must never be used in production.
+spring:
+  datasource:
+    password: ${DB_PASSWORD:smartqueue}
+smartqueue:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-secret-do-not-use-in-prod-0123456789abcdef}
+logging:
+  level:
+    com.smartqueue: DEBUG
